@@ -1,0 +1,300 @@
+<!-- START SIGMA IMPORTS -->
+<script src="../src/sigma.core.js"></script>
+<script src="../src/conrad.js"></script>
+<script src="../src/utils/sigma.utils.js"></script>
+<script src="../src/utils/sigma.polyfills.js"></script>
+<script src="../src/sigma.settings.js"></script>
+<script src="../src/classes/sigma.classes.dispatcher.js"></script>
+<script src="../src/classes/sigma.classes.configurable.js"></script>
+<script src="../src/classes/sigma.classes.graph.js"></script>
+<script src="../src/classes/sigma.classes.camera.js"></script>
+<script src="../src/classes/sigma.classes.quad.js"></script>
+<script src="../src/classes/sigma.classes.edgequad.js"></script>
+<script src="../src/captors/sigma.captors.mouse.js"></script>
+<script src="../src/captors/sigma.captors.touch.js"></script>
+<script src="../src/renderers/sigma.renderers.canvas.js"></script>
+<script src="../src/renderers/sigma.renderers.webgl.js"></script>
+<script src="../src/renderers/sigma.renderers.svg.js"></script>
+<script src="../src/renderers/sigma.renderers.def.js"></script>
+<script src="../src/renderers/webgl/sigma.webgl.nodes.def.js"></script>
+<script src="../src/renderers/webgl/sigma.webgl.nodes.fast.js"></script>
+<script src="../src/renderers/webgl/sigma.webgl.edges.def.js"></script>
+<script src="../src/renderers/webgl/sigma.webgl.edges.fast.js"></script>
+<script src="../src/renderers/webgl/sigma.webgl.edges.arrow.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.labels.def.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.hovers.def.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.nodes.def.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edges.def.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edges.curve.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edges.arrow.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edges.curvedArrow.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edgehovers.def.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edgehovers.curve.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edgehovers.arrow.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.edgehovers.curvedArrow.js"></script>
+<script src="../src/renderers/canvas/sigma.canvas.extremities.def.js"></script>
+<script src="../src/renderers/svg/sigma.svg.utils.js"></script>
+<script src="../src/renderers/svg/sigma.svg.nodes.def.js"></script>
+<script src="../src/renderers/svg/sigma.svg.edges.def.js"></script>
+<script src="../src/renderers/svg/sigma.svg.edges.curve.js"></script>
+<script src="../src/renderers/svg/sigma.svg.labels.def.js"></script>
+<script src="../src/renderers/svg/sigma.svg.hovers.def.js"></script>
+<script src="../src/middlewares/sigma.middlewares.rescale.js"></script>
+<script src="../src/middlewares/sigma.middlewares.copy.js"></script>
+<script src="../src/misc/sigma.misc.animation.js"></script>
+<script src="../src/misc/sigma.misc.bindEvents.js"></script>
+<script src="../src/misc/sigma.misc.bindDOMEvents.js"></script>
+<script src="../src/misc/sigma.misc.drawHovers.js"></script>
+<!-- END SIGMA IMPORTS -->
+<div id="container">
+  <style>
+    #graph-container {
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      position: absolute;
+    }
+  </style>
+  <div id="graph-container"></div>
+</div>
+
+<script type="module">
+	import { generateMembers, createGraph, getMembersForCountryDivision } from './util_functions.js';
+
+	Object.size = function(obj) {
+		var size = 0, key;
+		for (key in obj) {
+			if (obj.hasOwnProperty(key)) size++;
+		}
+		return size;
+	};
+
+	var s, g;
+	var countries, 
+		divisions,
+		members;
+	var numMembers, numCountries, numDivisions;
+	var labelThresholdSize = 4;
+	var gOptions = {
+		nodeSizes: [3,2,1],
+		nodeColors: ['#000', '#333','#f00'],
+		dxCD: 2, dyCD: 2,
+		dxM: 0.25, dyM: 0.25
+	};
+
+	countries = ['USA', 'CZ', 'GER', 'HU', 'AT', 'DK'];
+	countries = countries.sort();
+	countries = ['INT'].concat(countries);
+	divisions  = ['IT', 'HRA', 'EDU', 'MAR', 'FIN', 'LEG', 'PUB', 'RES', 'TRA'];
+	divisions = divisions.sort();
+	numCountries = countries.length;
+	numDivisions = divisions.length;
+	numMembers =  2*numCountries*numDivisions;
+	members = generateMembers(numMembers, countries, divisions);
+
+	g = createGraph(countries, divisions, members, gOptions);
+
+// Add a method to the graph model that returns an object with every neighbors of a node inside: //{{{
+	sigma.classes.graph.addMethod('neighbors', function(nodeId) {
+		var k,
+			neighbors = {},
+			index = this.allNeighborsIndex[nodeId] || {};
+
+		for (k in index)
+			neighbors[k] = this.nodesIndex[k];
+
+		return neighbors;
+	}); //}}}
+// Add a method to reposition nodes according to open/closed nodes : //{{{
+	sigma.classes.graph.addMethod('updateNodePositions', function() {
+		//var dyMember = 1, dy0 = 0., dyEnd = 0.;
+		var dyMember = 0.25, dy0 = .1, dyEnd = 2*dyMember;
+		var i,k;
+		var cdNodes = [], memCdNodes = {};
+
+		this.nodes().forEach(function(n){
+			if(n.type == 'CountryDiv'){
+				cdNodes.push(n);
+			}
+		});
+
+		for(i=0;i<cdNodes.length;i++){
+			memCdNodes[i] = Object.assign({}, this.allNeighborsIndex[cdNodes[i].id]);	
+		}
+
+		//get max number of visible members for each country
+		var numMemMaxCountry = [];
+		for(i=0;i<numCountries;i++){
+			var numMembersMax = 0;
+			for(k=0;k<cdNodes.length;k++){
+				if(cdNodes[k].country === countries[i] && cdNodes[k].isOpen){
+					//console.log(memCdNodes[k]);
+					numMembersMax = Math.max(Object.size(memCdNodes[k]), numMembersMax);
+				}
+			}
+			numMemMaxCountry.push(numMembersMax);
+		}
+
+		  //compute y-offset
+		let dyCountries = [];
+		for(i=0;i<numCountries;i++){
+			if(i==0){
+				dyCountries[i] = 0.;
+			} else {
+				dyCountries[i] = dyCountries[i-1] + numMemMaxCountry[i-1]*dyMember + dyEnd;
+			}
+		}
+	  //console.log(numMemMaxCountry, dyCountries);
+
+		//reposition nodes
+		for(i=0;i<cdNodes.length;i++){
+			//countrydiv Nodes
+			let nCD = this.nodesIndex[cdNodes[i].id];
+			let index = countries.indexOf(nCD.country);
+			nCD.y = dyCountries[index];
+
+			//corresponding member nodes
+			let nCount = 0;
+			for(k in memCdNodes[i]){
+				let node = this.nodesIndex[k];
+				nCount++;
+				node.y = nCD.y + dy0 + nCount*dyMember;
+			}
+		}
+	}); //}}}
+// Add a method to the graph model that colors nodes accordingly : //{{{
+	sigma.classes.graph.addMethod('setNodeColors', function() {
+		var colorMember = '#000', colorCountryDivOk = '#0f0', colorCountryDivFail = '#f00';
+		var cdNodes = [], memCdNodes = {};
+		var i;
+
+		var nodes = this.nodes();
+		for(i=0; i<nodes.length;i++){
+			let n = nodes[i];
+			let nodeColor = '#0ff'
+			if(n.type == 'CountryDiv'){
+				let memCDN = Object.assign({}, this.allNeighborsIndex[n.id]);
+				if(Object.size(memCDN) == 0) {
+					nodeColor = colorCountryDivFail;
+				} else {
+					nodeColor = colorCountryDivOk;
+				}
+			} else if (n.type === 'Member') {
+				nodeColor = colorMember;
+			} else {
+
+			}
+			n.color = nodeColor;
+		}
+	}); //}}}
+// Add a method to the graph model that sets node sizes : //{{{
+	sigma.classes.graph.addMethod('setNodeSizes', function() {
+		var sizeMember = 2, sizeCountryDiv = 4;
+		var cdNodes = [], memCdNodes = {};
+		var i;
+
+		var nodes = this.nodes();
+		for(i=0; i<nodes.length;i++){
+			let n = nodes[i];
+			let nodeSize= 6;
+			if(n.type == 'CountryDiv'){
+				nodeSize = sizeCountryDiv;
+			} else if (n.type === 'Member') {
+				nodeSize = sizeMember;
+			} else {
+
+			}
+			n.size = nodeSize;
+		}
+	}); //}}}
+
+	// Instantiate sigma:
+	s = new sigma({
+		graph: g,
+		container: 'graph-container',
+		settings: {
+			labelThreshold: labelThresholdSize
+		}
+	});
+	s.graph.updateNodePositions();
+	s.graph.setNodeColors();
+	s.graph.setNodeSizes();
+
+	s.refresh();
+
+	s.bind('clickNode', function(e) { //{{{
+		//console.log(e);
+		var node = e.data.node;
+		var nodeId = e.data.node.id;
+		//toKeep = s.graph.neighbors(nodeId);
+		//toKeep[nodeId] = e.data.node;
+
+		// Add functionality that displays detail view depending on kind of node
+		// toggle isOpen, whether it is on or off
+
+		// collapse view: hide all nodes and reposition other nodes
+		if(node.type == 'Member'){ //{{{
+			if(node.isOpen){
+				var elem = document.createElement('div');
+				var posX = String(node["cam0:x"] + 10),
+				posY = String(node["cam0:y"] + 10),
+				width = '200';
+				elem.style.cssText = 'position:absolute;left:' + posX + 'px;top:' + posY +
+				'px;opacity:1;z-index:100;background:#fff;color:#000';
+				elem.innerHTML = getMemberHTML(node.member);
+				document.body.appendChild(elem);
+				node.infoElem = elem;
+			} else{
+				if(node.infoElem){
+					var item = document.getElementById(node.infoElem.id);
+					document.body.removeChild(item);
+				}
+			} //}}}
+			node.isOpen = !node.isOpen;
+		} else if(node.type == 'CountryDiv'){ //{{{
+			if(node.isOpen){
+				// hide all members & reposition all nodes
+				var neighbors = s.graph.neighbors(node.id);
+				s.graph.nodes().forEach(function(n) {
+					if (n.type == 'Member' && neighbors[n.id]){
+						n.hidden = true;
+					} else{
+						//do nothing
+					}
+			  });
+			} else {
+			// show all members & reposition all nodes
+				var neighbors = s.graph.neighbors(node.id);
+				s.graph.nodes().forEach(function(n) {
+					if (n.type == 'Member' && neighbors[n.id]){
+						n.hidden = false;
+					} else{
+						//do nothing
+					}
+			  });
+			}
+			node.isOpen = !node.isOpen;
+		} //}}}
+		s.graph.updateNodePositions();
+
+		// Since the data has been modified, we need to
+		// call the refresh method to make the colors
+		// update effective.
+		s.refresh();
+	});
+	// }}}
+
+	function getMemberHTML(member){
+		var html = "<ul>"
+		for(let key of Object.keys(member)){
+			html += '<li>';
+			html += key + ': ' + member[key];
+			html += '</li>';
+		}
+		html += '</ul>';
+		return html;
+	}
+	
+</script>
+
