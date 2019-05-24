@@ -47,7 +47,7 @@
 <script src="../src/misc/sigma.misc.drawHovers.js"></script>
 <!-- END SIGMA IMPORTS -->
 <div id="container">
-  <style>
+	<style>
     #graph-container {
       top: 0;
       bottom: 0;
@@ -55,8 +55,65 @@
       right: 0;
       position: absolute;
     }
-  </style>
+    #control-pane {
+      top: 10px;
+      /*bottom: 10px;*/
+      right: 10px;
+      position: absolute;
+      width: 230px;
+      background-color: rgb(249, 247, 237);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    #control-pane > div {
+      margin: 10px;
+      overflow-x: auto;
+    }
+    .line {
+      clear: both;
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 12px 0 0 0;
+      border-bottom: 1px solid #aac789;
+      background: transparent;
+    }
+    h2, h3, h4 {
+      padding: 0;
+      font-variant: small-caps;
+    }
+    .green {
+      color: #437356;
+    }
+    h2.underline {
+      color: #437356;
+      background: #f4f0e4;
+      margin: 0;
+      border-radius: 2px;
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+    .hidden {
+      display: none;
+      visibility: hidden;
+    }
+  </style> 
   <div id="graph-container"></div>
+  <div id="control-pane">
+    <h2 class="underline">Menue</h2>
+    
+    <div>
+      <h3>Select Country</h3>
+      <select id="node-country">
+        <option value="" selected>All countries</option>
+      </select>
+    </div>
+    <span class="line"></span>
+    <div>
+      <button id="collapse-btn">Collapse all</button>
+    </div>
+    <div id="dump" class="hidden"></div>
+  </div>
+
 </div>
 
 <script type="module">
@@ -208,6 +265,18 @@
 			n.size = nodeSize;
 		}
 	}); //}}}
+// Add a method to the graph model that collapses all nodes : //{{{
+	sigma.classes.graph.addMethod('collapseAll', function() {
+		var nodes = this.nodes();
+		var i;
+		for(i=0; i<nodes.length;i++){
+			let n = nodes[i];
+			n.isOpen = false;
+			if (n.type == 'Member'){
+				n.hidden = true;
+			}
+		}
+	}); //}}}
 
 	// Instantiate sigma:
 	s = new sigma({
@@ -217,11 +286,14 @@
 			labelThreshold: labelThresholdSize
 		}
 	});
+	s.graph.collapseAll();
 	s.graph.updateNodePositions();
 	s.graph.setNodeColors();
 	s.graph.setNodeSizes();
 
 	s.refresh();
+
+  updatePane();
 
 	s.bind('clickNode', function(e) { //{{{
 		//console.log(e);
@@ -285,7 +357,8 @@
 	});
 	// }}}
 
-	function getMemberHTML(member){
+	//FUNCTIONS
+	function getMemberHTML(member){ //{{{
 		var html = "<ul>"
 		for(let key of Object.keys(member)){
 			html += '<li>';
@@ -294,7 +367,23 @@
 		}
 		html += '</ul>';
 		return html;
-	}
+	} //}}}
+
+	function updatePane(){ //{{{
+		console.log("updating pane");
+		var btn = document.getElementById('collapse-btn');
+		btn.onclick = function(){
+			collapseAll();
+		};
+		console.log(btn);
+	} //}}}
+
+	function collapseAll(){ //{{{
+		console.log("collapsing all");
+		  s.graph.collapseAll();
+			s.graph.updateNodePositions();
+		  s.refresh();
+	} //}}}
 	
 </script>
 
