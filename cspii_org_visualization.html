@@ -101,13 +101,15 @@
   <div id="control-pane">
     <h2 class="underline">Menue</h2>
     
-    <div>
+	 <!--
+    <div style="hidden">
       <h3>Select Country</h3>
       <select id="node-country">
         <option value="" selected>All countries</option>
       </select>
     </div>
     <span class="line"></span>
+	 -->
     <div>
       <button id="collapse-btn">Collapse all</button>
     </div>
@@ -308,20 +310,21 @@
 		// collapse view: hide all nodes and reposition other nodes
 		if(node.type == 'Member'){ //{{{
 			if(node.isOpen){
-				var elem = document.createElement('div');
-				var posX = String(node["cam0:x"] + 10),
-				posY = String(node["cam0:y"] + 10),
-				width = '200';
-				elem.style.cssText = 'position:absolute;left:' + posX + 'px;top:' + posY +
-				'px;opacity:1;z-index:100;background:#fff;color:#000';
-				elem.innerHTML = getMemberHTML(node.member);
-				document.body.appendChild(elem);
-				node.infoElem = elem;
-			} else{
 				if(node.infoElem){
 					var item = document.getElementById(node.infoElem.id);
 					document.body.removeChild(item);
 				}
+			} else{
+				var elem = document.createElement('div');
+				elem.id = 'member_div_' + node.member.id;
+				var posX = String(node["cam0:x"] + 10),
+				posY = String(node["cam0:y"] + 10), 
+				width = '200';
+				elem.style.cssText = 'position:absolute;left:' + posX + 'px;top:' + posY +
+				'px;opacity:0.8;z-index:100;background:#fff;color:#000';
+				elem.innerHTML = getMemberHTML(node.member);
+				document.body.appendChild(elem);
+				node.infoElem = elem;
 			} //}}}
 			node.isOpen = !node.isOpen;
 		} else if(node.type == 'CountryDiv'){ //{{{
@@ -359,23 +362,25 @@
 
 	//FUNCTIONS
 	function getMemberHTML(member){ //{{{
-		var html = "<ul>"
+		  var html = "<div>";
+		html += '<h2 class="underline">' + member.name + '</h2>';
+		html += "<ul>"
 		for(let key of Object.keys(member)){
+			if(key=="name") continue;
 			html += '<li>';
 			html += key + ': ' + member[key];
 			html += '</li>';
 		}
 		html += '</ul>';
+		html += '</div>';
 		return html;
 	} //}}}
 
 	function updatePane(){ //{{{
-		console.log("updating pane");
 		var btn = document.getElementById('collapse-btn');
 		btn.onclick = function(){
 			collapseAll();
 		};
-		console.log(btn);
 	} //}}}
 
 	function collapseAll(){ //{{{
