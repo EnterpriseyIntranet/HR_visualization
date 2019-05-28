@@ -1,3 +1,9 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="cspii_org_visualization.css">
+</head>
+<body>
 <!-- START SIGMA IMPORTS -->
 <script src="../src/sigma.core.js"></script>
 <script src="../src/conrad.js"></script>
@@ -46,57 +52,9 @@
 <script src="../src/misc/sigma.misc.bindDOMEvents.js"></script>
 <script src="../src/misc/sigma.misc.drawHovers.js"></script>
 <!-- END SIGMA IMPORTS -->
+
 <div id="container">
-	<style>
-    #graph-container {
-      top: 0;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      position: absolute;
-    }
-    #control-pane {
-      top: 10px;
-      /*bottom: 10px;*/
-      right: 10px;
-      position: absolute;
-      width: 230px;
-      background-color: rgb(249, 247, 237);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-    #control-pane > div {
-      margin: 10px;
-      overflow-x: auto;
-    }
-    .line {
-      clear: both;
-      display: block;
-      width: 100%;
-      margin: 0;
-      padding: 12px 0 0 0;
-      border-bottom: 1px solid #aac789;
-      background: transparent;
-    }
-    h2, h3, h4 {
-      padding: 0;
-      font-variant: small-caps;
-    }
-    .green {
-      color: #437356;
-    }
-    h2.underline {
-      color: #437356;
-      background: #f4f0e4;
-      margin: 0;
-      border-radius: 2px;
-      padding: 8px 12px;
-      font-weight: 700;
-    }
-    .hidden {
-      display: none;
-      visibility: hidden;
-    }
-  </style> 
+
   <div id="graph-container"></div>
   <div id="control-pane">
     <h2 class="underline">Menue</h2>
@@ -119,7 +77,9 @@
 </div>
 
 <script type="module">
-	import { generateMembers, createGraph, getMembersForCountryDivision } from './util_functions.js';
+	import { generateMembers, createGraph, getMembersForCountryDivision, getMemberHTML, updatePane,
+	collapseAll } from './util_functions.js';
+
 
 	Object.size = function(obj) {
 		var size = 0, key;
@@ -295,7 +255,7 @@
 
 	s.refresh();
 
-  updatePane();
+	updatePane(s);
 
 	s.bind('clickNode', function(e) { //{{{
 		//console.log(e);
@@ -360,35 +320,7 @@
 	});
 	// }}}
 
-	//FUNCTIONS
-	function getMemberHTML(member){ //{{{
-		  var html = "<div>";
-		html += '<h2 class="underline">' + member.name + '</h2>';
-		html += "<ul>"
-		for(let key of Object.keys(member)){
-			if(key=="name") continue;
-			html += '<li>';
-			html += key + ': ' + member[key];
-			html += '</li>';
-		}
-		html += '</ul>';
-		html += '</div>';
-		return html;
-	} //}}}
-
-	function updatePane(){ //{{{
-		var btn = document.getElementById('collapse-btn');
-		btn.onclick = function(){
-			collapseAll();
-		};
-	} //}}}
-
-	function collapseAll(){ //{{{
-		console.log("collapsing all");
-		  s.graph.collapseAll();
-			s.graph.updateNodePositions();
-		  s.refresh();
-	} //}}}
-	
 </script>
 
+</body>
+<html>

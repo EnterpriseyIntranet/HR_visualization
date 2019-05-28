@@ -20,7 +20,6 @@ export function generateMembers(N, countries, divisions){//{{{
 	}
 	return members;
 }//}}}
-
 export function createGraph(countries, divisions, members, options){ //{{{
     var g = {
       nodes: [],
@@ -35,6 +34,41 @@ export function createGraph(countries, divisions, members, options){ //{{{
 		}
 	});
 	return g;
+} //}}}
+export function getMembersForCountryDivision(members, country, division){//{{{
+	var retval = [];
+	for(let m of members){
+		if(m.countries.indexOf(country)>-1 && m.divisions.indexOf(division)>-1){
+			retval.push(m);
+		}
+	}
+	return retval;
+}//}}}
+export function getMemberHTML(member){ //{{{
+	  var html = "<div>";
+	html += '<h2 class="underline">' + member.name + '</h2>';
+	html += "<ul>"
+	for(let key of Object.keys(member)){
+		if(key=="name") continue;
+		html += '<li>';
+		html += key + ': ' + member[key];
+		html += '</li>';
+	}
+	html += '</ul>';
+	html += '</div>';
+	return html;
+} //}}}
+export function updatePane(sigma){ //{{{
+	var btn = document.getElementById('collapse-btn');
+	btn.onclick = function(){
+		collapseAll(sigma);
+	};
+} //}}}
+export function collapseAll(sigma){ //{{{
+	console.log("collapsing all");
+	sigma.graph.collapseAll();
+	sigma.graph.updateNodePositions();
+	sigma.refresh();
 } //}}}
 
 function getCountryDivNodes(countries, divisions, options){//{{{
@@ -159,16 +193,6 @@ function getMembersForCDNode(node, members){//{{{
 	} else {
 		return null;
 	}
-}//}}}
-
-export function getMembersForCountryDivision(members, country, division){//{{{
-	var retval = [];
-	for(let m of members){
-		if(m.countries.indexOf(country)>-1 && m.divisions.indexOf(division)>-1){
-			retval.push(m);
-		}
-	}
-	return retval;
 }//}}}
 
 // export function structureMembers(members, countries, divisions){//{{{
